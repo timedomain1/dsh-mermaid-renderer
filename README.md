@@ -20,12 +20,17 @@ Supports `flowchart / graph / sequenceDiagram / classDiagram / stateDiagram / er
 Requires DeepSeek Harness `0.1.0-rc.8` (web profile).
 
 ```bash
-# From npm (after publishing)
+# From GitHub (recommended — works today, no npm publish required)
+dsh plugin --profile web add git+https://github.com/timedomain1/dsh-mermaid-renderer.git
+
+# Or from npm (after publishing)
 dsh plugin --profile web add dsh-mermaid-renderer
 
 # Or from a local checkout
 dsh plugin --profile web add file:/path/to/dsh-mermaid-renderer
 ```
+
+No build step required — the bundle is pre-built, so git installs work out of the box.
 
 Then **restart `dsh web`** and refresh the browser tab. Verify by sending a ```mermaid code block in the chat.
 
