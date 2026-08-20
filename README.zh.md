@@ -18,10 +18,12 @@ DeepSeek Harness（dsh）网页插件：自动把聊天里的 **Mermaid 代码�
 
 ## 安装
 
-要求：DeepSeek Harness `0.1.0-rc.8`（web profile）。
+要求：DeepSeek Harness `0.1.0-rc.8`（web profile），且已启用 pnpm。
+
+> 前置准备（一次性）：`dsh plugin` 底层调用 pnpm。若 `pnpm --version` 提示找不到命令，在管理员终端执行 `corepack enable` 启用（Node 自带 corepack），然后新开一个终端即可。
 
 ```bash
-# 从 GitHub 安装（推荐：无需发布 npm，立即可用）
+# 从 GitHub 安装（推荐：无需发布 npm，一条命令即可，无需手动下载压缩包）
 dsh plugin --profile web add git+https://github.com/timedomain1/dsh-mermaid-renderer.git
 
 # 或从 npm 安装（发布到 npm 后可用）

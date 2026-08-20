@@ -17,10 +17,12 @@ Supports `flowchart / graph / sequenceDiagram / classDiagram / stateDiagram / er
 
 ## Install
 
-Requires DeepSeek Harness `0.1.0-rc.8` (web profile).
+Requires DeepSeek Harness `0.1.0-rc.8` (web profile) with pnpm enabled.
+
+> One-time prerequisite: `dsh plugin` shells out to pnpm. If `pnpm --version` fails, run `corepack enable` in an admin terminal (Node ships corepack), then open a new terminal.
 
 ```bash
-# From GitHub (recommended — works today, no npm publish required)
+# From GitHub (recommended — works today; one command, no manual download)
 dsh plugin --profile web add git+https://github.com/timedomain1/dsh-mermaid-renderer.git
 
 # Or from npm (after publishing)
