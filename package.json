@@ -1,0 +1,61 @@
+{
+  "name": "dsh-mermaid-renderer",
+  "description": "DeepSeek Harness 网页插件：自动把聊天中的 Mermaid 代码块渲染成可缩放、可切换源码的图表",
+  "version": "1.2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/timedomain1/dsh-mermaid-renderer.git"
+  },
+  "homepage": "https://github.com/timedomain1/dsh-mermaid-renderer#readme",
+  "bugs": {
+    "url": "https://github.com/timedomain1/dsh-mermaid-renderer/issues"
+  },
+  "type": "module",
+  "main": "lib/index.js",
+  "types": "lib/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./lib/types/index.d.ts",
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "types": "./lib/types/client/index.d.ts",
+      "default": "./lib/client.js"
+    },
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "lib/index.js",
+    "lib/client.js",
+    "lib/types/**/*.d.ts",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "mermaid",
+    "diagram",
+    "flowchart",
+    "plugin"
+  ],
+  "license": "MIT",
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web"
+    }
+  }
+}

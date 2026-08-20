@@ -1,0 +1,9 @@
+# dsh-mermaid-renderer bundle patch
+# 在 profile 组合中插入本插件：
+#   - 同一行既是宿主半（lib/index.js 的 apply）也是浏览器名单行
+#     （dsh.client 扫描按行的 name 即包名发现 lib/client.js）。
+# 卸载时删除本行（或 dsh plugin remove dsh-mermaid-renderer 自动调和）。
+
+- insert:
+    - id: mermaid-renderer
+      name: 'dsh-mermaid-renderer'
