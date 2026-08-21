@@ -1,7 +1,7 @@
 {
   "name": "dsh-mermaid-renderer",
   "description": "DeepSeek Harness 网页插件：自动把聊天中的 Mermaid 代码块渲染成可缩放、可切换源码的图表",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "publishConfig": {
     "access": "public"
   },
