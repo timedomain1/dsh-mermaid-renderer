@@ -101,6 +101,15 @@ dsh plugin --profile web remove dsh-mermaid-renderer       # 命令行网页端
   然后运行 `node scripts/build-client.mjs`。校验生成物是否最新：
   `node scripts/build-client.mjs --check`；验证引擎可用：`node scripts/test-inline-engine.mjs`。
 
+### 这 3.43 MB 会不会反复下载？
+
+不会。宿主对插件 bundle 设了 `cache-control: public, max-age=31536000, immutable`，且 URL 带内容指纹——
+**不升级插件就不会重新传输**；只有升级插件、清空缓存或更换浏览器时才下载一次。
+桌面端（Junction 链接到本机源码）更是直接读本机磁盘，不经过网络。
+
+> 注：插件的 bundle 位于启动清单的 `application` 预加载批次，与 `dsh.client.immediately` 无关——
+> 后者决定"何时执行"，不是"何时下载"。详见 `CHANGELOG.md` 的对应小节与设计权衡记录。
+
 ## 分享 / 发布到社区
 
 发布以 GitHub 为主（`main` 分支 + 版本 tag + Release）：

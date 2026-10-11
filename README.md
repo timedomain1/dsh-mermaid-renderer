@@ -105,6 +105,17 @@ Restart the host afterwards.
   `node scripts/build-client.mjs`. Verify freshness with `node scripts/build-client.mjs --check`, and verify the
   engine with `node scripts/test-inline-engine.mjs`.
 
+### Is that 3.43 MB downloaded repeatedly?
+
+No. The host serves a plugin bundle with `cache-control: public, max-age=31536000, immutable`, and bundle URLs
+carry a content fingerprint — so **nothing is re-transferred unless the plugin is upgraded**, the cache is
+cleared, or the browser changes. In the desktop app the bundle is a local junction to the source directory and
+never crosses the network at all.
+
+> Note: plugin bundles sit in the boot manifest's `application` preload batch, which is independent of
+> `dsh.client.immediately` — that flag governs *when the factory executes*, not *when the bytes are fetched*.
+> See the corresponding section in `CHANGELOG.md`.
+
 ## Share / publish to the community
 
 Distribution is GitHub-first (`main` branch + version tags + Releases):
