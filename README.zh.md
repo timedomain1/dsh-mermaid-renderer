@@ -2,8 +2,10 @@
 
 [English](README.md) | 中文
 
-DeepSeek Harness（dsh）网页插件：自动把聊天里的 **Mermaid 代码块**渲染成图表卡片。
+DeepSeek Harness（dsh）聊天界面插件：自动把聊天里的 **Mermaid 代码块**渲染成图表卡片。
 支持 `flowchart / graph / sequenceDiagram / classDiagram / stateDiagram / erDiagram / journey / gantt / pie / mindmap / timeline / C4Context / gitGraph` 等 Mermaid 图型。
+
+> **同时适用于命令行网页端与官方桌面端**——桌面端内置的就是同一套聊天界面，两者共用同一份插件代码。
 
 ## 功能
 
@@ -13,7 +15,7 @@ DeepSeek Harness（dsh）网页插件：自动把聊天里的 **Mermaid 代码�
 - **连续放大 / 缩小 / 还原**（0.25x–4x，无次数限制；卡片内 Ctrl+滚轮 也可缩放，超出宽度时横向滚动）；
 - **⛶ 独立查看器**：全屏浮层单独打开（不受聊天区重渲染影响），滚轮绕光标缩放（5%–1000%）、拖拽平移、适应宽度 / 100%、双击适应、ESC 关闭；还可「新标签页打开」成独立自包含页面，配合浏览器缩放查看全局；
 - 一键「复制源码」；
-- Mermaid 引擎**按需加载**（首个图表出现时才联网拉取），失败时保留代码视图并提示重试；
+- Mermaid 引擎**按需加载**（首个图表出现时才拉取），且**离线可用**；
 - 纯 DOM 后处理，不侵入界面框架，卸载后页面恢复原样（样式、定时器、监听均由 `ctx.effect` 托管回收）。
 
 ## 兼容性
@@ -62,7 +64,16 @@ D:\DeepSeekHarness\plugins\dsh-mermaid-renderer              # 本机插件目�
 **重启对应宿主**（命令行重启 `dsh web`；桌面端完全退出后重开），然后发送一个 ```mermaid 代码块，
 或打开历史消息中的 mermaid 代码块。两端各自独立生效，装了一边不影响另一边。
 
+打开开发者控制台可看到启用日志（**桌面端按 F12 或 Ctrl+Shift+I；浏览器按 F12**）：
+
+```
+[dsh-mermaid-renderer] v1.3.0 已启用：聊天中的 Mermaid 代码块将自动渲染
+```
+
 > 说明：`dsh plugin` 会转发给 pnpm 安装并把本包（声明了 `dsh.bundle.patch`）自动加入对应 profile 的 bundle 层。无 pnpm 时也可手动安装：把本包目录放进 `$DSH_HOME/profiles/<profile>/node_modules/dsh-mermaid-renderer/`，并把 `"dsh-mermaid-renderer"` 追加进该 profile `package.json` 的 `dsh.profile.bundles` 列表。
+>
+> 桌面端 profile 由应用独占管理，命令行 `dsh plugin --profile desktop` 会被拒绝
+> （`profile "desktop" is managed exclusively by the Electron application`），请在应用内「插件」页操作。
 
 ## 卸载
 
@@ -77,23 +88,29 @@ dsh plugin --profile web remove dsh-mermaid-renderer       # 命令行网页端
 
 ## 兼容性与依赖
 
-- 浏览器半：无任何第三方依赖（手写 `__ModuleLoader__` 静态 bundle，按官方 `dsh.client` 协议打包）；
+- 浏览器半：运行时不依赖任何第三方包（手写 `__ModuleLoader__` 静态 bundle，按官方 `dsh.client` 协议打包）；
+  内联的 Mermaid 引擎已随文件分发，**不需要联网**；
 - 宿主半：空 `apply`，仅用于出现在 Cordis 组合中（同官方 `dsh-client-ui-*` 插件模式）；
 - 清单声明 `dsh.client.immediately` 与 `inject: ["@deepseek-ai/dsh-client-ui-conversation"]`，
   让插件在会话界面就绪后再激活（与官方 `templates/decoration` 一致；两个宿主均支持这两个字段）；
-- Mermaid v11 引擎在浏览器首次渲染时从 jsDelivr / unpkg CDN 加载（**需要联网**）。
-  可自定义引擎地址：在浏览器控制台或更早加载的脚本里设置
-  `window.__DSH_MERMAID_URL__ = 'https://你的镜像/mermaid.min.js'`。
-  离线场景可自行把 `mermaid.min.js` 内联进 `lib/client.js` 的加载逻辑。
+- **Mermaid 引擎加载顺序**（首个图表出现时才拉取，结果缓存）：
+  1. `window.__DSH_MERMAID_URL__`（自定义镜像，可在控制台设置）
+  2. jsDelivr → unpkg（联网，8 秒超时，失败自动换下一个）
+  3. **内联引擎**（随 `client.js` 分发，离线兜底）
+- `lib/client.js` 是**生成物**（约 3.43 MB，含内联引擎）。改代码请改 `lib/client.src.js`，
+  然后运行 `node scripts/build-client.mjs`。校验生成物是否最新：
+  `node scripts/build-client.mjs --check`；验证引擎可用：`node scripts/test-inline-engine.mjs`。
 
 ## 分享 / 发布到社区
 
 发布以 GitHub 为主（`main` 分支 + 版本 tag + Release）：
 
-1. 改好 `package.json` 版本号 → 更新 `CHANGELOG.md` → `git tag vX.Y.Z` → `git push --tags`；
-2. 在 GitHub 上把 tag 发成 Release（附本版变更说明）；
-3. 如需发布 tarball 供桌面端插件管理器按 URL 安装，把 `npm pack` 产物作为 Release 附件上传；
-4. 注册进社区目录：
+1. 升级引擎（可选）：`node <repo>/scripts/vendor-mermaid.mjs` 重新下载 `.vendor/mermaid.min.js`，
+   再跑 `node scripts/build-client.mjs` 重建 `lib/client.js`，并运行 `node scripts/test-inline-engine.mjs` 验证；
+2. 改好 `package.json` 版本号 → 更新 `CHANGELOG.md`（含兼容性对照表）→ `git tag vX.Y.Z` → `git push --tags`；
+3. 在 GitHub 上把 tag 发成 Release（附本版变更说明）；
+4. 如需发布 tarball 供桌面端插件管理器按 URL 安装，把 `npm pack` 产物作为 Release 附件上传；
+5. 注册进社区目录：
    - [dsh.fish](https://github.com/stvlynn/dsh.fish)（插件发现/安装器，按其 README 提交条目）
    - [awesome-dsh-plugins](https://github.com/AdamPlatin123/awesome-dsh-plugins)
    - [awesome-deepseek-harness](https://github.com/Dominic789654/awesome-deepseek-harness)
@@ -108,6 +125,19 @@ dsh plugin --profile web remove dsh-mermaid-renderer       # 命令行网页端
 样式、定时器与 DOM 监听统一登记在 `apply` 的 `ctx.effect` 内，插件卸载时一并回收，页面不留残余。
 
 > 为什么是 DOM 后处理而不是官方槽位：官方目前**没有为代码块内容提供扩展点**（全部槽位均不能接管 markdown 代码渲染，renderer 包也未暴露 markdown/remark 扩展）。官方文档推荐的 `conversation.chat.node` 槽用于**新增**消息行，无法改写既有代码块，因此本插件采用 DOM 后处理。详见 `CHANGELOG.md` 的已知偏差一节。
+
+## 仓库结构
+
+```
+lib/client.src.js         手写模板（改代码改这里）
+lib/client.js             生成物，含内联引擎（勿手改）
+lib/index.js              宿主半（空 apply）
+.vendor/mermaid.min.js    内联用的引擎（已提交，构建可离线复现）
+scripts/build-client.mjs  构建：模板 + 引擎 → lib/client.js
+scripts/test-inline-engine.mjs  验证内联引擎可用
+cordis.patch.yml          bundle 补丁
+CHANGELOG.md              版本与宿主兼容性对照表
+```
 
 ## License
 

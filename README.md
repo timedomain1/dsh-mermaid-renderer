@@ -2,8 +2,11 @@
 
 English | [中文](README.zh.md)
 
-A DeepSeek Harness (dsh) web plugin that renders **Mermaid code blocks** in the chat as diagram cards.
+A DeepSeek Harness (dsh) chat-UI plugin that renders **Mermaid code blocks** in the chat as diagram cards.
 Supports `flowchart / graph / sequenceDiagram / classDiagram / stateDiagram / erDiagram / journey / gantt / pie / mindmap / timeline / C4Context / gitGraph` and more.
+
+> **Works in both the command-line web UI and the official desktop app** — the desktop app embeds the same
+> chat UI, and both hosts share one plugin codebase.
 
 ## Features
 
@@ -12,7 +15,7 @@ Supports `flowchart / graph / sequenceDiagram / classDiagram / stateDiagram / er
 - **Repeatable zoom in / out / reset** (0.25x–4x, unlimited steps; Ctrl+wheel also zooms inside the card; horizontal scroll past container width);
 - **⛶ standalone viewer**: a fullscreen overlay (mounted on `document.body`, immune to chat re-renders) with cursor-centered wheel zoom (5%–1000%), drag-to-pan, fit-width / 100%, double-click to fit, ESC to close; plus **open in a new tab** as a self-contained page for global viewing with the browser's own zoom;
 - One-click **copy source**;
-- The Mermaid engine is **lazy-loaded** (fetched on first diagram; requires internet), failures keep the source view with a retry hint;
+- The Mermaid engine is **lazy-loaded** (fetched on the first diagram) and **works offline**;
 - Pure DOM post-processing — no UI framework internals touched; removing the plugin restores the original page (styles, timers and listeners are all disposed through `ctx.effect`).
 
 ## Compatibility
@@ -64,7 +67,16 @@ D:\DeepSeekHarness\plugins\dsh-mermaid-renderer              # local plugin dire
 block or open one in an existing message. The two hosts are independent — installing for one does not affect
 the other.
 
+Open the developer console for the startup line (**desktop app: F12 or Ctrl+Shift+I; browser: F12**):
+
+```
+[dsh-mermaid-renderer] v1.3.0 已启用：聊天中的 Mermaid 代码块将自动渲染
+```
+
 > `dsh plugin` forwards to pnpm and adds this package (it declares `dsh.bundle.patch`) to the target profile's bundle layer automatically. Without pnpm you can install manually: place this package directory at `$DSH_HOME/profiles/<profile>/node_modules/dsh-mermaid-renderer/` and append `"dsh-mermaid-renderer"` to `dsh.profile.bundles` in that profile's `package.json`.
+>
+> The `desktop` profile is owned exclusively by the Electron app: `dsh plugin --profile desktop` is rejected
+> (`profile "desktop" is managed exclusively by the Electron application`). Use the in-app Plugins page.
 
 ## Uninstall
 
@@ -79,23 +91,31 @@ Restart the host afterwards.
 
 ## Compatibility & dependencies
 
-- Browser half: zero third-party dependencies (hand-written static bundle in the official `dsh.client` / `__ModuleLoader__` protocol);
+- Browser half: no third-party runtime packages (hand-written static bundle in the official `dsh.client` /
+  `__ModuleLoader__` protocol); the inlined Mermaid engine ships with the file, so **no internet is required**;
 - Host half: empty `apply` (present in the Cordis composition only), same pattern as the official `dsh-client-ui-*` packages;
 - Manifest declares `dsh.client.immediately` and `inject: ["@deepseek-ai/dsh-client-ui-conversation"]`, so the
   plugin activates after the conversation UI is ready (matches the official `templates/decoration`; both hosts
   support these fields);
-- Mermaid v11 loads from the jsDelivr / unpkg CDN at first render (**internet required**).
-  Override the engine URL with `window.__DSH_MERMAID_URL__ = 'https://your-mirror/mermaid.min.js'`.
-  For offline setups, inline `mermaid.min.js` into the loader logic in `lib/client.js`.
+- **Engine load order** (fetched on the first diagram, then cached):
+  1. `window.__DSH_MERMAID_URL__` (custom mirror, settable from the console)
+  2. jsDelivr → unpkg (online, 8-second timeout, falls through on failure)
+  3. **the inlined engine** (ships inside `client.js` — the offline fallback)
+- `lib/client.js` is **generated** (≈3.43 MB with the engine inlined). Edit `lib/client.src.js` instead, then run
+  `node scripts/build-client.mjs`. Verify freshness with `node scripts/build-client.mjs --check`, and verify the
+  engine with `node scripts/test-inline-engine.mjs`.
 
 ## Share / publish to the community
 
 Distribution is GitHub-first (`main` branch + version tags + Releases):
 
-1. Bump `package.json`, update `CHANGELOG.md`, then `git tag vX.Y.Z && git push --tags`;
-2. Publish the tag as a GitHub Release describing the change;
-3. To offer a tarball for the desktop plugin manager's URL form, attach `npm pack` output to the Release;
-4. Register in community directories:
+1. Upgrade the engine (optional): re-run `vendor-mermaid.mjs` to refresh `.vendor/mermaid.min.js`, rebuild with
+   `node scripts/build-client.mjs`, then verify with `node scripts/test-inline-engine.mjs`;
+2. Bump `package.json`, update `CHANGELOG.md` (including the host-compatibility table), then
+   `git tag vX.Y.Z && git push --tags`;
+3. Publish the tag as a GitHub Release describing the change;
+4. To offer a tarball for the desktop plugin manager's URL form, attach `npm pack` output to the Release;
+5. Register in community directories:
    - [dsh.fish](https://github.com/stvlynn/dsh.fish) (plugin discovery/installer — follow its README to add an entry)
    - [awesome-dsh-plugins](https://github.com/AdamPlatin123/awesome-dsh-plugins)
    - [awesome-deepseek-harness](https://github.com/Dominic789654/awesome-deepseek-harness)
@@ -114,6 +134,19 @@ all of them and leaves no residue on the page.
 > block content** (none of the available slots can take over markdown code rendering, and the renderer package
 > exposes no markdown/remark extension). The documented `conversation.chat.node` slot **adds** message rows and
 > cannot rewrite existing code blocks. See the "known deviations" section in `CHANGELOG.md`.
+
+## Repository layout
+
+```
+lib/client.src.js         hand-written template — edit this one
+lib/client.js             generated, contains the inlined engine (do not edit)
+lib/index.js              host half (empty apply)
+.vendor/mermaid.min.js    the inlined engine (committed, so builds work offline)
+scripts/build-client.mjs  build: template + engine → lib/client.js
+scripts/test-inline-engine.mjs  verify the inlined engine initializes
+cordis.patch.yml          bundle patch
+CHANGELOG.md              versions and the host-compatibility table
+```
 
 ## License
 

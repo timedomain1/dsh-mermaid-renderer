@@ -7,12 +7,47 @@
 
 | 插件版本 | 命令行 `dsh web` | 官方桌面端 | 备注 |
 |---|---|---|---|
+| 1.3.0 | 0.1.5-rc.1 ✅ | 0.2.0-rc.2 ✅ | 内联引擎离线兜底 + 加载超时 |
 | 1.2.2 | 0.1.5-rc.1 ✅ | 0.2.0-rc.2 ✅ | 双宿主元数据与清理修复 |
 | 1.2.1 | 0.1.5-rc.1 ✅ | 未验证 | 流式输出重复渲染修复 |
 | 1.2.0 | 0.1.0-rc.8 ✅ | 未验证 | 首个可用版本 |
 
 > 两个宿主在客户端插件契约上完全一致（`dsh-client-modules` / `dsh-client-ui-conversation` /
 > `dsh-cordis-client-runner` 已实测比对），因此同一份代码无需分支即可双端运行。
+
+---
+
+## [1.3.0] - 2026-10-11
+
+### 新增
+
+- **离线兜底：内联 Mermaid 引擎**。引擎随 `lib/client.js` 一起分发，断网或网络受限时图表仍可渲染。
+  引擎加载顺序变为：`window.__DSH_MERMAID_URL__`（自定义镜像）→ jsDelivr → unpkg → **内联引擎**。
+- 引擎末尾自带 `globalThis["mermaid"] = …`，内联后无需额外包装即可被发现。
+
+### 变更
+
+- 外部源加载加入 **8 秒超时**（`CDN_TIMEOUT_MS`），离线时不再等待浏览器默认的长时间超时；
+  超时与网络错误一样，继续尝试下一个源。
+- 引擎初始化逻辑抽为 `initEngine()`，外部源与内联引擎共用同一套美化默认值。
+
+### 为什么引擎必须内联，而不能作为独立文件按需加载
+
+DSH 每个插件**只暴露一个资产路径 `client.js`**：宿主路由形如
+`/plugins/${resource.id}/${resource.fileName}`，而 `fileName` 恒为 `"client.js"`；CLI 侧更是直接硬编码。
+`package.json` 里**没有**声明额外静态资源的字段；`dsh.client.external` 只对"已注册为客户端模块的包"生效，
+对第三方普通库无效。
+
+所以 3.4 MB 的引擎只能内联进 `client.js`，**会计入该文件的下载体积**（构建后约 3.43 MB）。
+这是当前宿主架构下的取舍，不是实现上的偷懒。若将来官方支持插件附带静态资源，应改为按需拉取。
+
+### 工程
+
+- 引入构建步骤：`lib/client.src.js`（可手改的模板）+ `.vendor/mermaid.min.js`（已提交，构建可离线复现）
+  → `scripts/build-client.mjs` → `lib/client.js`（**生成物，请勿手改**）。
+- `node scripts/build-client.mjs --check` 校验生成物是否与模板+引擎一致。
+- `node scripts/test-inline-engine.mjs`：在全局作用域执行内联引擎，验证 `globalThis.mermaid`、
+  `initialize()`、`render()` 可用（改动引擎或升级 mermaid 后必须运行）。
 
 ---
 
