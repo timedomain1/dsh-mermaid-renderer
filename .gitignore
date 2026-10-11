@@ -3,5 +3,8 @@ node_modules/
 .DS_Store
 *.log
 
-# �ύ��Ϣ��ʱ�ļ����� git commit -F ʱ������
+# 提交信息临时文件（git commit -F 用，不应入库）
 COMMIT_MSG.tmp
+
+# 说明：.vendor/mermaid.min.js 是**有意提交**的——
+# 它是 lib/client.js 内联引擎的输入，提交后构建可复现、无需联网。
