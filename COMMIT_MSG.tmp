@@ -1,9 +1,0 @@
-docs: 补充 Release 发布流程，并声明已适配最新桌面端 0.2.0-rc.2
-
-- 新增 scripts/publish-github-release.mjs：一键发布 Release，
-  说明正文直接取自 CHANGELOG 对应小节（两者不会脱节），
-  仓库 owner/repo 由 origin 自动解析，令牌取自 git 凭据助手且不打印
-- README（中/英）：安装章节增加「版本与下载」指向 Releases；
-  兼容性表标注官方桌面端为最新版；补上两端「改源码生效方式不同」的提醒
-  （桌面端链接→重启即生效；网页端拷贝→必须卸载重装）
-- 仓库结构补上新脚本说明

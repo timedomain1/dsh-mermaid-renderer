@@ -2,3 +2,6 @@ node_modules/
 *.tgz
 .DS_Store
 *.log
+
+# 提交信息临时文件（用 git commit -F 时产生）
+COMMIT_MSG.tmp
