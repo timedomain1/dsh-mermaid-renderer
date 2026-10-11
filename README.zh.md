@@ -14,43 +14,73 @@ DeepSeek Harness（dsh）网页插件：自动把聊天里的 **Mermaid 代码�
 - **⛶ 独立查看器**：全屏浮层单独打开（不受聊天区重渲染影响），滚轮绕光标缩放（5%–1000%）、拖拽平移、适应宽度 / 100%、双击适应、ESC 关闭；还可「新标签页打开」成独立自包含页面，配合浏览器缩放查看全局；
 - 一键「复制源码」；
 - Mermaid 引擎**按需加载**（首个图表出现时才联网拉取），失败时保留代码视图并提示重试；
-- 纯 DOM 后处理，不侵入界面框架，卸载后页面恢复原样。
+- 纯 DOM 后处理，不侵入界面框架，卸载后页面恢复原样（样式、定时器、监听均由 `ctx.effect` 托管回收）。
+
+## 兼容性
+
+**同一份代码同时支持命令行网页端与官方桌面端**——两个宿主在客户端插件契约上完全一致（已实测比对
+`dsh-client-modules` / `dsh-client-ui-conversation` / `dsh-cordis-client-runner`）。
+
+| 宿主 | 版本（实测通过） | profile 名 |
+|---|---|---|
+| 命令行 `dsh web` | `0.1.5-rc.1` | `web` |
+| 官方桌面端 | `0.2.0-rc.2` | `desktop` |
+
+> 两端是**两份独立的安装记录**（读不同的 profile），所以要让两边都生效就得装两次——代码只有一份，
+> 改完源码两端重启后都会生效。
 
 ## 安装
 
-要求：DeepSeek Harness `0.1.0-rc.8`（web profile），且已启用 pnpm。
+要求：DeepSeek Harness `>=0.1.5-rc.1`（兼容 `0.2.x`），且已启用 pnpm。
 
 > 前置准备（一次性）：`dsh plugin` 底层调用 pnpm。若 `pnpm --version` 提示找不到命令，在管理员终端执行 `corepack enable` 启用（Node 自带 corepack），然后新开一个终端即可。
 
+### 命令行网页端（profile 名 `web`）
+
 ```bash
-# 从 GitHub 安装（推荐：无需发布 npm，一条命令即可，无需手动下载压缩包）
+# 从 GitHub 安装（推荐：无需发布 npm）
 dsh plugin --profile web add git+https://github.com/timedomain1/dsh-mermaid-renderer.git
 
-# 或从 npm 安装（发布到 npm 后可用）
-dsh plugin --profile web add dsh-mermaid-renderer
-
-# 或从本地目录安装
+# 或从本地目录安装（改源码即时生效，适合二次开发）
 dsh plugin --profile web add file:/path/to/dsh-mermaid-renderer
 ```
 
-本包**无需构建步骤**（bundle 已写好），git 安装开箱即用。
+### 官方桌面端（profile 名 `desktop`）
 
-安装后**重启 `dsh web`** 并刷新浏览器页面。验证：在聊天中发送一个 ```mermaid 代码块，或打开历史消息中的 mermaid 代码块。
+桌面端内置 Node/pnpm，**不必装命令行环境**。在应用内打开「插件」页 → 添加插件，填入以下任一形式：
 
-> 说明：`dsh plugin` 会转发给 pnpm 安装并把本包（声明了 `dsh.bundle.patch`）自动加入 web profile 的 bundle 层。无 pnpm 时也可手动安装：把本包目录放进 `$DSH_HOME/profiles/web/node_modules/dsh-mermaid-renderer/`，并把 `"dsh-mermaid-renderer"` 追加进 `$DSH_HOME/profiles/web/package.json` 的 `dsh.profile.bundles` 列表。
+```
+https://github.com/timedomain1/dsh-mermaid-renderer          # Git 仓库地址
+D:\DeepSeekHarness\plugins\dsh-mermaid-renderer              # 本机插件目录（须为绝对路径）
+```
+
+> 桌面端插件管理器接受四类来源：npm 包名、Git 仓库地址、tarball 链接（`.tgz`）、本机绝对路径。
+> **相对路径会被拒绝**，本地安装必须写完整绝对路径。
+
+### 装完的验证
+
+**重启对应宿主**（命令行重启 `dsh web`；桌面端完全退出后重开），然后发送一个 ```mermaid 代码块，
+或打开历史消息中的 mermaid 代码块。两端各自独立生效，装了一边不影响另一边。
+
+> 说明：`dsh plugin` 会转发给 pnpm 安装并把本包（声明了 `dsh.bundle.patch`）自动加入对应 profile 的 bundle 层。无 pnpm 时也可手动安装：把本包目录放进 `$DSH_HOME/profiles/<profile>/node_modules/dsh-mermaid-renderer/`，并把 `"dsh-mermaid-renderer"` 追加进该 profile `package.json` 的 `dsh.profile.bundles` 列表。
 
 ## 卸载
 
 ```bash
-dsh plugin --profile web remove dsh-mermaid-renderer
+dsh plugin --profile web remove dsh-mermaid-renderer       # 命令行网页端
 ```
 
-重启 `dsh web`。手动安装者：删除上述 node_modules 目录并移除 bundles 列表中的条目。
+桌面端：在「插件」页里移除 `dsh-mermaid-renderer`。手动安装者：删除对应 profile 的
+`node_modules/dsh-mermaid-renderer/` 目录，并移除该 profile `package.json` 中 bundles 列表里的条目。
+
+重启对应宿主后生效。
 
 ## 兼容性与依赖
 
 - 浏览器半：无任何第三方依赖（手写 `__ModuleLoader__` 静态 bundle，按官方 `dsh.client` 协议打包）；
 - 宿主半：空 `apply`，仅用于出现在 Cordis 组合中（同官方 `dsh-client-ui-*` 插件模式）；
+- 清单声明 `dsh.client.immediately` 与 `inject: ["@deepseek-ai/dsh-client-ui-conversation"]`，
+  让插件在会话界面就绪后再激活（与官方 `templates/decoration` 一致；两个宿主均支持这两个字段）；
 - Mermaid v11 引擎在浏览器首次渲染时从 jsDelivr / unpkg CDN 加载（**需要联网**）。
   可自定义引擎地址：在浏览器控制台或更早加载的脚本里设置
   `window.__DSH_MERMAID_URL__ = 'https://你的镜像/mermaid.min.js'`。
@@ -58,16 +88,26 @@ dsh plugin --profile web remove dsh-mermaid-renderer
 
 ## 分享 / 发布到社区
 
-1. 改好 `package.json` 里的版本号后 `npm publish`；
-2. 注册进社区目录：
+发布以 GitHub 为主（`main` 分支 + 版本 tag + Release）：
+
+1. 改好 `package.json` 版本号 → 更新 `CHANGELOG.md` → `git tag vX.Y.Z` → `git push --tags`；
+2. 在 GitHub 上把 tag 发成 Release（附本版变更说明）；
+3. 如需发布 tarball 供桌面端插件管理器按 URL 安装，把 `npm pack` 产物作为 Release 附件上传；
+4. 注册进社区目录：
    - [dsh.fish](https://github.com/stvlynn/dsh.fish)（插件发现/安装器，按其 README 提交条目）
    - [awesome-dsh-plugins](https://github.com/AdamPlatin123/awesome-dsh-plugins)
    - [awesome-deepseek-harness](https://github.com/Dominic789654/awesome-deepseek-harness)
    - [Anil-matcha/awesome-dsh-plugin](https://github.com/Anil-matcha/awesome-dsh-plugin)
 
+> 可选：`npm publish` 后即可用包名安装（`dsh plugin add dsh-mermaid-renderer`）。当前未发布。
+
 ## 工作原理
 
-包是标准的「双面」dsh 插件：`cordis.patch.yml`（`dsh.bundle.patch`）在 profile 组合中插入一行（`name` 为包名），宿主的客户端模块系统（`@deepseek-ai/dsh-client-modules`）据此扫描 `dsh.client` 声明，把 `lib/client.js` 注入网页启动清单 `window.__DSH_BOOT__`，浏览器侧的 Cordis loader 实例化后调用 `apply(ctx)`。`apply` 里用 `MutationObserver` 监听聊天区 DOM，发现 Mermaid 代码块后懒加载引擎并渲染为 SVG。
+包是标准的「双面」dsh 插件：`cordis.patch.yml`（`dsh.bundle.patch`）在 profile 组合中插入一行（`name` 为包名），宿主的客户端模块系统（`@deepseek-ai/dsh-client-modules`）据此扫描 `dsh.client` 声明，把 `lib/client.js` 注入网页启动清单，浏览器侧的 Cordis loader 实例化后调用 `apply(ctx)`。`apply` 里用 `MutationObserver` 监听聊天区 DOM，发现 Mermaid 代码块后懒加载引擎并渲染为 SVG。
+
+样式、定时器与 DOM 监听统一登记在 `apply` 的 `ctx.effect` 内，插件卸载时一并回收，页面不留残余。
+
+> 为什么是 DOM 后处理而不是官方槽位：官方目前**没有为代码块内容提供扩展点**（全部槽位均不能接管 markdown 代码渲染，renderer 包也未暴露 markdown/remark 扩展）。官方文档推荐的 `conversation.chat.node` 槽用于**新增**消息行，无法改写既有代码块，因此本插件采用 DOM 后处理。详见 `CHANGELOG.md` 的已知偏差一节。
 
 ## License
 
