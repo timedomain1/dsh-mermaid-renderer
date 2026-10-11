@@ -26,14 +26,15 @@ DeepSeek Harness（dsh）聊天界面插件：自动把聊天里的 **Mermaid �
 | 宿主 | 版本（实测通过） | profile 名 |
 |---|---|---|
 | 命令行 `dsh web` | `0.1.5-rc.1` | `web` |
-| 官方桌面端 | `0.2.0-rc.2` | `desktop` |
+| **官方桌面端（最新版）** | **`0.2.0-rc.2`** | `desktop` |
 
-> 两端是**两份独立的安装记录**（读不同的 profile），所以要让两边都生效就得装两次——代码只有一份，
-> 改完源码两端重启后都会生效。
+> 两端是**两份独立的安装记录**（读不同的 profile），所以要让两边都生效就得装两次——代码只有一份。
+> ⚠️ 改源码后的生效方式**两端不同**：桌面端是链接到源码，重启即生效；网页端是拷贝，
+> **必须卸载后重装**才会更新（`add --force` 无效）。
 
 ## 安装
 
-要求：DeepSeek Harness `>=0.1.5-rc.1`（兼容 `0.2.x`），且已启用 pnpm。
+要求：DeepSeek Harness `>=0.1.5-rc.1`（**已适配最新桌面端 `0.2.0-rc.2`**），且已启用 pnpm。
 
 > 前置准备（一次性）：`dsh plugin` 底层调用 pnpm。若 `pnpm --version` 提示找不到命令，在管理员终端执行 `corepack enable` 启用（Node 自带 corepack），然后新开一个终端即可。
 
@@ -43,7 +44,7 @@ DeepSeek Harness（dsh）聊天界面插件：自动把聊天里的 **Mermaid �
 # 从 GitHub 安装（推荐：无需发布 npm）
 dsh plugin --profile web add git+https://github.com/timedomain1/dsh-mermaid-renderer.git
 
-# 或从本地目录安装（改源码即时生效，适合二次开发）
+# 或从本地目录安装（适合二次开发）
 dsh plugin --profile web add file:/path/to/dsh-mermaid-renderer
 ```
 
@@ -52,12 +53,20 @@ dsh plugin --profile web add file:/path/to/dsh-mermaid-renderer
 桌面端内置 Node/pnpm，**不必装命令行环境**。在应用内打开「插件」页 → 添加插件，填入以下任一形式：
 
 ```
-https://github.com/timedomain1/dsh-mermaid-renderer          # Git 仓库地址
+https://github.com/timedomain1/dsh-mermaid-renderer          # Git 仓库地址（推荐）
 D:\DeepSeekHarness\plugins\dsh-mermaid-renderer              # 本机插件目录（须为绝对路径）
 ```
 
 > 桌面端插件管理器接受四类来源：npm 包名、Git 仓库地址、tarball 链接（`.tgz`）、本机绝对路径。
 > **相对路径会被拒绝**，本地安装必须写完整绝对路径。
+>
+> 注：`desktop` profile 由桌面应用独占管理，命令行 `dsh plugin --profile desktop` 会被拒绝
+> （`profile "desktop" is managed exclusively by the Electron application`），请在应用内操作。
+
+### 版本与下载
+
+最新版本见 [Releases](https://github.com/timedomain1/dsh-mermaid-renderer/releases)，
+每个版本带完整变更说明与宿主兼容性表。
 
 ### 装完的验证
 
@@ -112,14 +121,27 @@ dsh plugin --profile web remove dsh-mermaid-renderer       # 命令行网页端
 
 ## 分享 / 发布到社区
 
-发布以 GitHub 为主（`main` 分支 + 版本 tag + Release）：
+发布以 GitHub 为主（`main` 分支 + 版本 tag + Release）。仓库内附有一键发布脚本，
+**Release 说明直接取自 `CHANGELOG.md` 对应小节**，因此两者不会脱节：
 
-1. 升级引擎（可选）：`node <repo>/scripts/vendor-mermaid.mjs` 重新下载 `.vendor/mermaid.min.js`，
-   再跑 `node scripts/build-client.mjs` 重建 `lib/client.js`，并运行 `node scripts/test-inline-engine.mjs` 验证；
-2. 改好 `package.json` 版本号 → 更新 `CHANGELOG.md`（含兼容性对照表）→ `git tag vX.Y.Z` → `git push --tags`；
-3. 在 GitHub 上把 tag 发成 Release（附本版变更说明）；
-4. 如需发布 tarball 供桌面端插件管理器按 URL 安装，把 `npm pack` 产物作为 Release 附件上传；
-5. 注册进社区目录：
+```bash
+# 1. 发版前：改 package.json 版本号 + 更新 CHANGELOG.md（含兼容性对照表）
+# 2. 提交并打 tag
+git add -A && git commit -m "feat: ..." && git tag vX.Y.Z && git push origin main --tags
+# 3. 发布 Release（先 --dry-run 看一眼）
+node scripts/publish-github-release.mjs vX.Y.Z --dry-run
+node scripts/publish-github-release.mjs vX.Y.Z
+```
+
+> 脚本从 `git remote get-url origin` 自动识别仓库（在 fork 里也能直接用），
+> 令牌取自 git 凭据助手，不会打印。
+
+其它可选动作：
+
+1. 升级引擎：`node scripts/vendor-mermaid.mjs` 重新下载 `.vendor/mermaid.min.js` →
+   `node scripts/build-client.mjs` 重建 → `node scripts/test-inline-engine.mjs` 验证；
+2. 如需 tarball 供桌面端插件管理器按 URL 安装，把 `npm pack` 产物作为 Release 附件上传；
+3. 注册进社区目录：
    - [dsh.fish](https://github.com/stvlynn/dsh.fish)（插件发现/安装器，按其 README 提交条目）
    - [awesome-dsh-plugins](https://github.com/AdamPlatin123/awesome-dsh-plugins)
    - [awesome-deepseek-harness](https://github.com/Dominic789654/awesome-deepseek-harness)
@@ -144,6 +166,7 @@ lib/index.js              宿主半（空 apply）
 .vendor/mermaid.min.js    内联用的引擎（已提交，构建可离线复现）
 scripts/build-client.mjs  构建：模板 + 引擎 → lib/client.js
 scripts/test-inline-engine.mjs  验证内联引擎可用
+scripts/publish-github-release.mjs  一键发布 Release（说明取自 CHANGELOG）
 cordis.patch.yml          bundle 补丁
 CHANGELOG.md              版本与宿主兼容性对照表
 ```

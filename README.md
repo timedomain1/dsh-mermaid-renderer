@@ -27,14 +27,15 @@ identical client-plugin contract (verified against `dsh-client-modules` / `dsh-c
 | Host | Version (tested) | profile name |
 |---|---|---|
 | CLI `dsh web` | `0.1.5-rc.1` | `web` |
-| Official desktop app | `0.2.0-rc.2` | `desktop` |
+| **Official desktop app (latest)** | **`0.2.0-rc.2`** | `desktop` |
 
-> The two hosts read **separate profiles**, so enabling both means installing twice — the code itself is shared,
-> and a source edit takes effect in both after their next restart.
+> The two hosts read **separate profiles**, so enabling both means installing twice — the code itself is shared.
+> ⚠️ How a source edit propagates **differs**: the desktop app links to the source (restart is enough), while
+> the web profile gets a **copy** — it must be **removed and re-added** to update (`add --force` does not work).
 
 ## Install
 
-Requires DeepSeek Harness `>=0.1.5-rc.1` (compatible with `0.2.x`) with pnpm enabled.
+Requires DeepSeek Harness `>=0.1.5-rc.1` (**supports the latest desktop app, `0.2.0-rc.2`**) with pnpm enabled.
 
 > One-time prerequisite: `dsh plugin` shells out to pnpm. If `pnpm --version` fails, run `corepack enable` in an admin terminal (Node ships corepack), then open a new terminal.
 
@@ -44,7 +45,7 @@ Requires DeepSeek Harness `>=0.1.5-rc.1` (compatible with `0.2.x`) with pnpm ena
 # From GitHub (recommended — no npm publish needed)
 dsh plugin --profile web add git+https://github.com/timedomain1/dsh-mermaid-renderer.git
 
-# Or from a local checkout (edits take effect on restart — good for development)
+# Or from a local checkout (good for development)
 dsh plugin --profile web add file:/path/to/dsh-mermaid-renderer
 ```
 
@@ -54,12 +55,20 @@ The desktop app bundles its own Node/pnpm, so no command-line toolchain is requi
 **Plugins** page → add plugin, and enter either form:
 
 ```
-https://github.com/timedomain1/dsh-mermaid-renderer          # Git repository URL
+https://github.com/timedomain1/dsh-mermaid-renderer          # Git repository URL (recommended)
 D:\DeepSeekHarness\plugins\dsh-mermaid-renderer              # local plugin directory (must be absolute)
 ```
 
 > The desktop plugin manager accepts four source forms: npm package name, Git repository URL, tarball URL
 > (`.tgz`), and an absolute local path. **Relative paths are rejected.**
+>
+> The `desktop` profile is owned exclusively by the Electron app: `dsh plugin --profile desktop` is rejected
+> (`profile "desktop" is managed exclusively by the Electron application`). Use the in-app page.
+
+### Versions and downloads
+
+See [Releases](https://github.com/timedomain1/dsh-mermaid-renderer/releases) — every version carries full
+change notes and a host-compatibility table.
 
 ### Verifying
 
@@ -74,9 +83,6 @@ Open the developer console for the startup line (**desktop app: F12 or Ctrl+Shif
 ```
 
 > `dsh plugin` forwards to pnpm and adds this package (it declares `dsh.bundle.patch`) to the target profile's bundle layer automatically. Without pnpm you can install manually: place this package directory at `$DSH_HOME/profiles/<profile>/node_modules/dsh-mermaid-renderer/` and append `"dsh-mermaid-renderer"` to `dsh.profile.bundles` in that profile's `package.json`.
->
-> The `desktop` profile is owned exclusively by the Electron app: `dsh plugin --profile desktop` is rejected
-> (`profile "desktop" is managed exclusively by the Electron application`). Use the in-app Plugins page.
 
 ## Uninstall
 
@@ -118,15 +124,27 @@ never crosses the network at all.
 
 ## Share / publish to the community
 
-Distribution is GitHub-first (`main` branch + version tags + Releases):
+Distribution is GitHub-first (`main` branch + version tags + Releases). A publish script is included, and it
+takes the release notes **from the CHANGELOG section**, so the two never drift apart:
 
-1. Upgrade the engine (optional): re-run `vendor-mermaid.mjs` to refresh `.vendor/mermaid.min.js`, rebuild with
+```bash
+# 1. Before releasing: bump package.json and update CHANGELOG.md (incl. the compatibility table)
+# 2. Commit and tag
+git add -A && git commit -m "feat: ..." && git tag vX.Y.Z && git push origin main --tags
+# 3. Publish the Release (check the payload first)
+node scripts/publish-github-release.mjs vX.Y.Z --dry-run
+node scripts/publish-github-release.mjs vX.Y.Z
+```
+
+> The script derives owner/repo from `git remote get-url origin` (so it works from a fork) and reads the token
+> from the git credential helper without printing it.
+
+Other optional steps:
+
+1. Upgrade the engine: re-run `scripts/vendor-mermaid.mjs` to refresh `.vendor/mermaid.min.js`, rebuild with
    `node scripts/build-client.mjs`, then verify with `node scripts/test-inline-engine.mjs`;
-2. Bump `package.json`, update `CHANGELOG.md` (including the host-compatibility table), then
-   `git tag vX.Y.Z && git push --tags`;
-3. Publish the tag as a GitHub Release describing the change;
-4. To offer a tarball for the desktop plugin manager's URL form, attach `npm pack` output to the Release;
-5. Register in community directories:
+2. To offer a tarball for the desktop plugin manager's URL form, attach `npm pack` output to the Release;
+3. Register in community directories:
    - [dsh.fish](https://github.com/stvlynn/dsh.fish) (plugin discovery/installer — follow its README to add an entry)
    - [awesome-dsh-plugins](https://github.com/AdamPlatin123/awesome-dsh-plugins)
    - [awesome-deepseek-harness](https://github.com/Dominic789654/awesome-deepseek-harness)
@@ -155,6 +173,7 @@ lib/index.js              host half (empty apply)
 .vendor/mermaid.min.js    the inlined engine (committed, so builds work offline)
 scripts/build-client.mjs  build: template + engine → lib/client.js
 scripts/test-inline-engine.mjs  verify the inlined engine initializes
+scripts/publish-github-release.mjs  publish a Release (notes come from CHANGELOG)
 cordis.patch.yml          bundle patch
 CHANGELOG.md              versions and the host-compatibility table
 ```
